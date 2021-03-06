@@ -1,0 +1,175 @@
+#include <Wire.h>
+#include <NewPing.h>
+#include "Arduino.h"
+#include "SoftwareSerial.h"
+#include "DFRobotDFPlayerMini.h"
+#include <Adafruit_GFX.h>   // libreria para pantallas graficas
+#include <Adafruit_SSD1306.h>   // libreria para controlador SSD1306
+#define ANCHO 128     // reemplaza ocurrencia de ANCHO por 128
+#define ALTO 64       // reemplaza ocurrencia de ALTO por 64
+#define OLED_RESET 4      // necesario por la libreria pero no usado
+Adafruit_SSD1306 oled(ANCHO, ALTO, &Wire, OLED_RESET);  // crea objeto
+#define TRIGGER_PIN  5  // Aqui conectaremos el pin trigger del sensor ultrasonico
+#define ECHO_PIN     6  // Aqui conectaremos el pin echo de nuestro sensor
+#define MAX_DISTANCE 300 // Maxima distacia a medir en cm . Maximo que permite el sensor 400-500cm.
+
+NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE); // Configuramos nuestro sensor.
+
+SoftwareSerial mySoftwareSerial(10, 11); // RX, TX
+DFRobotDFPlayerMini myDFPlayer;
+void printDetail(uint8_t type, int value);
+
+
+/*********LIBRERIA_PARA_DHT11*********/
+#include <DHT.h>
+const int SEN = 2;
+int temp, humedad;
+DHT dht (SEN, DHT11);
+/*************************************/
+int distancia = 0;
+char DATO = 0;
+const int R1 = 0;
+const int R2 = 1;
+const int R3 = 2;
+const int R4 = 3;
+
+
+void setup() {
+  Serial.begin(9600);
+  dht.begin();
+  mySoftwareSerial.begin(9600);
+  Wire.begin();         // inicializa bus I2C
+  oled.begin(SSD1306_SWITCHCAPVCC, 0x3C); // inicializa pantalla con direccion 0x3C
+
+  Serial.println();
+  Serial.println(F("DFRobot DFPlayer Mini Demo"));
+  Serial.println(F("Initializing DFPlayer ... (May take 3~5 seconds)"));
+  if (!myDFPlayer.begin(mySoftwareSerial)) {  //Use softwareSerial to communicate with mp3.
+    Serial.println(F("Unable to begin:"));
+    Serial.println(F("1.Please recheck the connection!"));
+    Serial.println(F("2.Please insert the SD card!"));
+    while (true);
+  }
+  Serial.println(F("DFPlayer Mini online."));
+  myDFPlayer.setTimeOut(500); //Set serial communictaion time out 500ms
+  //----Set volume----
+  myDFPlayer.volume(30);  //Set volume value (0~30).
+  myDFPlayer.volumeUp(); //Volume Up
+  myDFPlayer.volumeDown(); //Volume Down
+  //----Set different EQ----
+  myDFPlayer.EQ(DFPLAYER_EQ_NORMAL);
+  //----Set device we use SD as default----
+  myDFPlayer.outputDevice(DFPLAYER_DEVICE_SD);
+  /*************************************/
+
+
+  pinMode(SEN, INPUT);
+  pinMode(R1, OUTPUT);
+  pinMode(R2, OUTPUT);
+  pinMode(R3, OUTPUT);
+  pinMode(R4, OUTPUT);
+}
+
+
+void loop() {
+  myDFPlayer.play(3);
+  delay(50000);
+  myDFPlayer.pause();  //pause the mp3
+  delay(100000);
+
+
+
+
+  humedad = dht.readHumidity();
+  temp = dht.readTemperature();
+  Serial.print("Temperatura: ");
+  Serial.print(temp);
+  Serial.print("ºC Humedad: ");
+  Serial.print(humedad);
+  Serial.println("%");
+  delay(1000);
+  oled.clearDisplay();
+  oled.setTextColor(WHITE);
+  oled.setCursor(38, 5);
+  oled.setTextSize(2);
+  oled.print("Temp");
+
+  oled.setCursor(44, 28);
+  oled.setTextSize(2);
+  oled.print(temp);   // imprimimos la distancia a travez del display lcd (arroja 0 cuando se supera la distancia maxima)
+  oled.print("C");
+  oled.display();
+  /**************************************************/
+  delay(50);  // delay para darle tiempo al sensor entre pings
+  distancia = sonar.ping_cm(); // guardamos la distancia medida en la variable
+  Serial.print("Distancia: ");
+  Serial.print(distancia); // imprimimos la distancia a travez del puerto serie (arroja 0 cuando se supera la distancia maxima
+  Serial.println("cm");
+
+  oled.setCursor(35, 50);
+  oled.setTextSize(2);
+  oled.print(distancia);   // imprimimos la distancia a travez del display lcd (arroja 0 cuando se supera la distancia maxima)
+  oled.print("Cm");
+  oled.display();
+
+
+
+
+  if (Serial.available() > 0) {
+    DATO = Serial.read();
+  }
+
+
+  switch (DATO) {
+    case '1' :  if (temp == 28) {
+        myDFPlayer.play(4);
+        Serial.print("Ventilador activo. Temperatura: ");
+        Serial.print(temp);
+        Serial.print(" ºC ");
+        delay(9000);
+      }
+
+
+      else if (temp == 29) {
+        myDFPlayer.play(9);
+        Serial.print("Ventilador activo. Temperatura: ");
+        Serial.print(temp);
+        Serial.print(" ºC ");
+        delay(9000);
+      }
+
+      else if (temp == 30) {
+        myDFPlayer.play(5);
+        Serial.print("Ventilador activo. Temperatura: ");
+        Serial.print(temp);
+        Serial.print(" ºC ");
+        delay(9000);
+      }
+
+      else if (temp == 31) {
+        myDFPlayer.play(6);
+        Serial.print("Ventilador activo. Temperatura: ");
+        Serial.print(temp);
+        Serial.print(" ºC ");
+        delay(9000);
+      }
+
+      else if (temp == 32) {
+        myDFPlayer.play(7);
+        Serial.print("Ventilador activo. Temperatura: ");
+        Serial.print(temp);
+        Serial.print(" ºC ");
+        delay(9000);
+      }
+      break ;
+
+    case '2' : digitalWrite (R1, HIGH);
+      myDFPlayer.play(20);
+      delay(100000);
+      break ;
+
+    case '3' : digitalWrite (R1, LOW);
+      myDFPlayer.play(2);
+      break ;
+  }
+}
